@@ -2,13 +2,36 @@
 
 import Hapi from "@hapi/hapi";
 import { Request, Server } from "@hapi/hapi";
+import hapiVision from "@hapi/vision";
 
 import { helloRoutes } from "./hello";
+import { peopleRoutes } from "./people";
 
 export let server: Server;
 
 function index(request: Request): string {
   return "Hello! Nice to have met you.";
+}
+
+async function registerVision(server: Server) {
+  let cached: boolean;
+
+  await server.register(hapiVision);
+
+  if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
+    cached = false;
+  } else {
+    cached = true;
+  }
+  server.log(["debug"], `Caching templates: ${cached}`);
+  server.views({
+    engines: {
+      ejs: require("ejs")
+    },
+    relativeTo: __dirname + "/../",
+    path: 'templates',
+    isCached: cached
+  });
 }
 
 export const init = async function(): Promise<Server> {
@@ -17,8 +40,11 @@ export const init = async function(): Promise<Server> {
     host: '0.0.0.0'
   });
 
+  await registerVision(server);
+
     /* Routes from other modules */
   server.route(helloRoutes);
+  server.route(peopleRoutes);
 
   /* Brief routes from this module */
   server.route({
